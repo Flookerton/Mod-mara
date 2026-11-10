@@ -515,7 +515,7 @@
     out.width = info[2];
     out.height = info[3];
     out.quality = 3;
-    out.note = "Made with Mod-mara Op Art Studio. Load this file in the app to get the same picture back.";
+    out.note = "Made with Mod Mara. Load this file in the app to get the same picture back.";
     return out;
   }
 

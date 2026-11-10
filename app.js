@@ -568,6 +568,13 @@
     $("caption-seed").textContent = "No. " + state.spec.seed;
   }
   function refreshAll() {
+    var panel = $("panel"), keepPanel = panel.scrollTop, keepX = window.scrollX, keepY = window.scrollY;
+    refreshPanel();
+    // rebuilding the controls must never move the page
+    panel.scrollTop = keepPanel;
+    if (window.scrollX !== keepX || window.scrollY !== keepY) window.scrollTo(keepX, keepY);
+  }
+  function refreshPanel() {
     var sp = state.spec, app = $("app");
     app.classList.toggle("kind-pattern", sp.kind === "pattern");
     app.classList.toggle("kind-illusion", sp.kind === "illusion");
@@ -962,7 +969,7 @@
       document.body.classList.add("no-gl");
       var msg = el("div", "no-gl-msg");
       msg.appendChild(el("h2", null, "This browser cannot draw the art"));
-      msg.appendChild(el("p", null, "Op Art Studio needs WebGL2. Try a current version of Chrome, Edge, Firefox or Safari, and make sure hardware acceleration is turned on."));
+      msg.appendChild(el("p", null, "Mod Mara needs WebGL2. Try a current version of Chrome, Edge, Firefox or Safari, and make sure hardware acceleration is turned on."));
       $("stage").appendChild(msg);
       console.error(e);
       return;

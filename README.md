@@ -1,4 +1,4 @@
-# Mod-mara: Op Art Studio
+# Mod Mara: Illusions for Losing One's Self
 
 Make black and white optical art in your browser: warped grids, endless spirals, hyperbolic
 tilings and classic illusions, with live sliders, seamless animation and a favorites gallery.

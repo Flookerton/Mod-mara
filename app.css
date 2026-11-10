@@ -48,7 +48,8 @@ canvas { display: block; }
   position: relative;
   z-index: 5;
 }
-.brand { margin: 0; position: relative; white-space: nowrap; line-height: 1; }
+.brand { margin: 0; position: relative; white-space: nowrap; line-height: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.brand-name, .brand-sub { position: relative; z-index: 1; }
 .brand-runes { display: none; }
 .bar-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
 .main { display: grid; grid-template-columns: minmax(0, 1fr) var(--panel-w); min-height: 0; }
@@ -77,7 +78,7 @@ body.dragging .drop-hint { display: flex; }
 .no-gl-msg { position: absolute; inset: 24px; display: grid; place-content: center; text-align: center; max-width: 520px; margin: auto; }
 
 /* ---------- panel ---------- */
-.panel { overflow-y: auto; overscroll-behavior: contain; border-left: var(--bw) solid var(--line); background: var(--panel); padding: 0 var(--gut) 28px; }
+.panel { position: relative; overflow-y: auto; overscroll-behavior: contain; border-left: var(--bw) solid var(--line); background: var(--panel); padding: 0 var(--gut) 28px; }
 .sec { padding: 18px 0 16px; border-bottom: 1px solid var(--soft); }
 .kind-pattern .only-illusion, .kind-illusion .only-pattern { display: none; }
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -119,7 +120,7 @@ body.dragging .drop-hint { display: flex; }
 
 /* small tool buttons: dice and lock, icons drawn with masks */
 .tool {
-  width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); background: transparent; cursor: pointer;
+  position: relative; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); background: transparent; cursor: pointer;
   display: inline-grid; place-items: center; border-radius: 0;
 }
 .tool::before {
@@ -171,8 +172,9 @@ input[type="range"]::-moz-range-track { height: 2px; background: var(--line); }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 18px; margin-top: -8px; background: var(--fg); border: 0; border-radius: 0; }
 input[type="range"]::-moz-range-thumb { width: 14px; height: 18px; background: var(--fg); border: 0; border-radius: 0; }
 input[type="range"]:focus-visible { outline-offset: 4px; }
-.check { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; cursor: pointer; font-family: var(--label); font-size: 12px; }
-.check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.check { position: relative; display: flex; align-items: center; gap: 10px; margin: 12px 0 0; cursor: pointer; font-family: var(--label); font-size: 12px; }
+/* the real checkbox stays on top of the drawn box, so focusing it never scrolls the page */
+.check input { position: absolute; left: 0; top: 0; margin: 0; opacity: 0; width: 18px; height: 18px; }
 .check-box { width: 18px; height: 18px; border: var(--bw) solid var(--line); flex: none; display: grid; place-items: center; }
 .check input:checked + .check-box { background: var(--sel-bg); }
 .check input:checked + .check-box::after { content: ""; width: 8px; height: 8px; background: var(--sel-fg); }

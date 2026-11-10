@@ -28,9 +28,8 @@
 [data-skin="vintage"] .brand-name {
   font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -.02em; text-transform: none;
 }
-[data-skin="vintage"] .brand-hi {
-  font-family: var(--label); font-weight: 400; font-size: 13px; letter-spacing: .22em; text-transform: uppercase;
-  vertical-align: middle; margin-left: 6px; padding: 3px 6px 2px; background: var(--fg); color: var(--panel);
+[data-skin="vintage"] .brand-sub {
+  font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 13.5px; letter-spacing: .01em; color: var(--muted);
 }
 
 /* the print on the table */

@@ -45,7 +45,10 @@
     0 0 18px rgba(76, 242, 116, .28);
   animation: phosphor 5.3s steps(1) infinite, jolt 7s steps(1) infinite;
 }
-[data-skin="glitch"] .brand-hi { color: var(--green); font-size: .62em; letter-spacing: .02em; }
+[data-skin="glitch"] .brand-sub {
+  font-family: var(--label); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--green);
+}
+[data-skin="glitch"] .brand-sub::before { content: "> "; color: var(--muted); }
 [data-skin="glitch"] .brand-runes {
   display: block; position: absolute; z-index: 0; left: 0; right: 0; top: 50%; transform: translateY(-50%);
   overflow: hidden; white-space: nowrap; font-family: "Studio Runes", var(--label); font-size: 9px; letter-spacing: .3em;
