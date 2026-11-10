@@ -25,11 +25,12 @@
 [data-skin="vintage"] .bar::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -7px; border-bottom: 1px solid var(--line);
 }
+[data-skin="vintage"] .brand-mark { color: var(--fg); }
 [data-skin="vintage"] .brand-name {
-  font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -.02em; text-transform: none;
+  font-family: var(--display); font-weight: 700; letter-spacing: -.035em; text-transform: none;
 }
 [data-skin="vintage"] .brand-sub {
-  font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 13.5px; letter-spacing: .01em; color: var(--muted);
+  font-family: Georgia, "Times New Roman", serif; font-style: italic; letter-spacing: .005em; color: #4a443c;
 }
 
 /* the print on the table */
@@ -57,3 +58,7 @@
 }
 [data-skin="vintage"] input[type="range"]::-webkit-slider-thumb { margin-top: -4px; }
 [data-skin="vintage"] .toast { box-shadow: 3px 3px 0 var(--accent); }
+
+@media (max-height: 560px) and (min-width: 561px) and (orientation: landscape) {
+  [data-skin="vintage"] .bar { padding-top: 6px; padding-bottom: 6px; }
+}

@@ -113,13 +113,21 @@
   }
 
   // ---------------------------------------------------------------- canvas sizing and render loop
-  var phone = window.matchMedia("(max-width: 760px)");
+  // same rule as the stacked layout in app.css
+  var phone = window.matchMedia("(max-width: 560px), (orientation: portrait) and (max-width: 1100px)");
+  // window height for the stacked layout; ignores the small changes when a phone's address bar slides away
+  var stableH = { w: 0, h: 0 };
+  function viewH() {
+    var w = window.innerWidth, h = window.innerHeight;
+    if (w !== stableH.w || Math.abs(h - stableH.h) > 160) { stableH.w = w; stableH.h = h; }
+    return stableH.h;
+  }
   function layoutCanvas() {
     var info = S.sizeInfo(state.spec.size), aspect = info[2] / info[3];
     var box = $("stage-box");
     if (phone.matches) {
       var bw = box.clientWidth || (window.innerWidth - 32);
-      box.style.height = Math.round(Math.min(window.innerHeight * 0.66, bw / aspect)) + "px";
+      box.style.height = Math.round(Math.min(viewH() * 0.66, bw / aspect)) + "px";
     } else {
       box.style.height = "";
     }
@@ -671,7 +679,7 @@
   }
   function saveJSON() {
     var data = JSON.stringify(S.exportSpec(state.spec), null, 2);
-    download(new Blob([data], { type: "application/json" }), "op-art-" + slug(state.spec) + "-" + state.spec.seed + ".json");
+    download(new Blob([data], { type: "application/json" }), "mod-mara-" + slug(state.spec) + "-" + state.spec.seed + ".json");
     toast("Settings saved.");
   }
 
@@ -696,7 +704,7 @@
       busy("Saving PNG", 1);
       var blob = await new Promise(function (res) { out.toBlob(res, "image/png"); });
       if (!blob) throw new Error("The browser could not make the PNG file.");
-      download(blob, "op-art-" + slug(state.spec) + "-" + state.spec.seed + "-" + W + "x" + H + ".png");
+      download(blob, "mod-mara-" + slug(state.spec) + "-" + state.spec.seed + "-" + W + "x" + H + ".png");
       toast("Picture saved (" + W + " x " + H + ").");
     } catch (e) {
       toast(e && e.message ? e.message : "Could not render that size here.");
@@ -805,13 +813,18 @@
   function openDrawer() {
     var d = $("drawer");
     d.hidden = false;
+    d.scrollTop = 0;
+    document.body.classList.add("drawer-open");
     $("btn-gallery").setAttribute("aria-expanded", "true");
     renderFavs();
-    $("drawer-close").focus();
+    $("drawer-close").focus({ preventScroll: true });
   }
   function closeDrawer() {
+    var wasOpen = !$("drawer").hidden;
     $("drawer").hidden = true;
+    document.body.classList.remove("drawer-open");
     $("btn-gallery").setAttribute("aria-expanded", "false");
+    if (wasOpen) $("btn-gallery").focus({ preventScroll: true });
   }
   function backupFavs() {
     if (!favs.length) { toast("No favorites to back up yet."); return; }
@@ -821,18 +834,24 @@
   }
   function restoreFavs(d) {
     var list = Array.isArray(d) ? d : d.favorites;
-    var added = 0, bad = 0;
+    var added = 0, bad = 0, dup = 0, full = 0;
     list.slice(0, MAX_FAVS).forEach(function (it) {
       var raw = it && it.spec && !it.kind ? it.spec : it;
       try {
         var spec = S.sanitize(raw);
-        if (favIndex(spec) < 0 && favs.length < MAX_FAVS) { favs.push({ spec: spec, added: Date.now() }); added++; }
+        if (favIndex(spec) >= 0) dup++;
+        else if (favs.length >= MAX_FAVS) full++;
+        else { favs.push({ spec: spec, added: Date.now() }); added++; }
       } catch (e) { bad++; }
     });
     saveFavs();
     updateFavButton();
     if (!$("drawer").hidden) renderFavs();
-    toast("Restored " + added + " favorite" + (added === 1 ? "" : "s") + (bad ? " (" + bad + " skipped)" : "") + ".");
+    var notes = [];
+    if (dup) notes.push(dup + " already here");
+    if (bad) notes.push(bad + " unreadable");
+    if (full) notes.push(full + " left out because favorites are full");
+    toast("Added " + added + " favorite" + (added === 1 ? "" : "s") + (notes.length ? " (" + notes.join(", ") + ")" : "") + ".");
   }
 
   // ---------------------------------------------------------------- recording a loop
@@ -852,7 +871,7 @@
       state.recording = null;
       $("btn-record").textContent = "Record loop";
       $("btn-record").classList.remove("rec");
-      download(new Blob(chunks, { type: "video/webm" }), "op-art-loop-" + slug(state.spec) + "-" + state.spec.seed + ".webm");
+      download(new Blob(chunks, { type: "video/webm" }), "mod-mara-loop-" + slug(state.spec) + "-" + state.spec.seed + ".webm");
       toast("Loop saved as a WebM video.");
     };
     state.recording = rec;
@@ -953,7 +972,17 @@
       else if (e.key === "f" || e.key === "F") toggleFav();
     });
 
-    on(window, "resize", layoutCanvas);
+    // sizes can settle over a few frames (rotation, window snapping), so measure again shortly after
+    var settle = 0;
+    function relayout() {
+      layoutCanvas();
+      requestAnimationFrame(layoutCanvas);
+      clearTimeout(settle);
+      settle = setTimeout(layoutCanvas, 200);
+    }
+    on(window, "resize", relayout);
+    on(window, "orientationchange", relayout);
+    if (phone.addEventListener) phone.addEventListener("change", relayout);
     if (window.ResizeObserver) new ResizeObserver(function () { layoutCanvas(); }).observe($("stage-box"));
   }
   function hasFiles(e) {
