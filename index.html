@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en" data-skin="vintage">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; style-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Mod-mara: Op Art Studio</title>
+<meta name="description" content="Make black and white optical art in your browser: warped grids, spirals and classic illusions, with live sliders and animation.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="skins/vintage.css">
+<link rel="stylesheet" href="skins/glitch.css">
+<script src="boot.js"></script>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="bar">
+    <h1 class="brand">
+      <span class="brand-runes" aria-hidden="true">MOD MARA OP ART STUDIO MOD MARA OP ART STUDIO MOD MARA OP ART STUDIO</span>
+      <span class="brand-name">Mod-mara <span class="brand-hi">Op Art Studio</span></span>
+    </h1>
+    <nav class="bar-actions" aria-label="Main actions">
+      <button type="button" class="btn btn-go" id="btn-surprise" title="Surprise me (R)">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.6" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>
+        <span>Surprise me</span>
+      </button>
+      <button type="button" class="btn icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4.5 12H15a5 5 0 0 1 0 10h-3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button type="button" class="btn icon-btn" id="btn-redo" title="Redo (Ctrl+Y)" aria-label="Redo">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5M19.5 12H9a5 5 0 0 0 0 10h3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button type="button" class="btn icon-btn" id="btn-play" title="Play or pause (Space)" aria-label="Play animation" aria-pressed="false">
+        <svg class="ico ico-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>
+        <svg class="ico ico-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z" fill="currentColor"/></svg>
+      </button>
+      <button type="button" class="btn icon-btn" id="btn-fav" title="Add to favorites (F)" aria-label="Add to favorites" aria-pressed="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5S3.5 15 3.5 9A4.5 4.5 0 0 1 12 6.7 4.5 4.5 0 0 1 20.5 9c0 6-8.5 11.5-8.5 11.5z" class="heart" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button type="button" class="btn" id="btn-gallery" aria-controls="drawer" aria-expanded="false">
+        <span>Favorites</span> <span class="count" id="fav-count">0</span>
+      </button>
+      <button type="button" class="btn icon-btn" id="btn-skin" title="Change the look" aria-label="Change the look">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+      </button>
+      <button type="button" class="btn icon-btn" id="btn-help" title="Help" aria-label="Help">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.3c-.8.4-1.2 1-1.2 1.8v.7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="17.2" r="1.2" fill="currentColor"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="main">
+    <section class="stage" id="stage" aria-label="Picture">
+      <div class="stage-box" id="stage-box">
+        <div class="frame" id="frame">
+          <canvas id="view" aria-label="Op art picture"></canvas>
+          <span class="crop tl" aria-hidden="true"></span><span class="crop tr" aria-hidden="true"></span>
+          <span class="crop bl" aria-hidden="true"></span><span class="crop br" aria-hidden="true"></span>
+        </div>
+      </div>
+      <p class="caption"><span class="caption-name" id="caption-name"></span><span class="caption-seed" id="caption-seed"></span></p>
+      <div class="drop-hint" id="drop-hint" aria-hidden="true"><span>Drop a settings file here</span></div>
+    </section>
+
+    <aside class="panel" id="panel" aria-label="Controls">
+
+      <section class="sec" id="sec-kind">
+        <header class="sec-head">
+          <h2><span class="sec-no">01</span> Kind</h2>
+          <div class="sec-tools"><button type="button" class="tool lock" data-lock="kind" aria-pressed="false" title="Keep the kind when you press Surprise me"><span class="sr">Lock kind</span></button></div>
+        </header>
+        <div class="seg" id="kind-seg" role="radiogroup" aria-label="Kind">
+          <button type="button" role="radio" data-kind="pattern">Pattern</button>
+          <button type="button" role="radio" data-kind="illusion">Illusion</button>
+        </div>
+      </section>
+
+      <section class="sec only-pattern" id="sec-warp">
+        <header class="sec-head">
+          <h2><span class="sec-no">02</span> Warp</h2>
+          <div class="sec-tools">
+            <button type="button" class="tool dice" data-dice="warp" title="Random warp"><span class="sr">Random warp</span></button>
+            <button type="button" class="tool lock" data-lock="warp" aria-pressed="false" title="Keep the warp when you press Surprise me"><span class="sr">Lock warp</span></button>
+          </div>
+        </header>
+        <p class="sec-note">How the grid bends.</p>
+        <div class="thumbs" id="warp-thumbs" role="radiogroup" aria-label="Warp"></div>
+        <div class="params" id="warp-params"></div>
+      </section>
+
+      <section class="sec only-pattern" id="sec-motif">
+        <header class="sec-head">
+          <h2><span class="sec-no">03</span> Motif</h2>
+          <div class="sec-tools">
+            <button type="button" class="tool dice" data-dice="motif" title="Random motif"><span class="sr">Random motif</span></button>
+            <button type="button" class="tool lock" data-lock="motif" aria-pressed="false" title="Keep the motif when you press Surprise me"><span class="sr">Lock motif</span></button>
+          </div>
+        </header>
+        <p class="sec-note">What is drawn in each tile.</p>
+        <div class="thumbs" id="motif-thumbs" role="radiogroup" aria-label="Motif"></div>
+        <div class="params" id="motif-params"></div>
+      </section>
+
+      <section class="sec only-illusion" id="sec-illusion">
+        <header class="sec-head">
+          <h2><span class="sec-no">02</span> Illusion</h2>
+          <div class="sec-tools">
+            <button type="button" class="tool dice" data-dice="illusion" title="Random illusion"><span class="sr">Random illusion</span></button>
+            <button type="button" class="tool lock" data-lock="illusion" aria-pressed="false" title="Keep the illusion when you press Surprise me"><span class="sr">Lock illusion</span></button>
+          </div>
+        </header>
+        <p class="sec-note">Classic tricks of the eye.</p>
+        <div class="thumbs" id="illusion-thumbs" role="radiogroup" aria-label="Illusion"></div>
+        <div class="params" id="illusion-params"></div>
+      </section>
+
+      <section class="sec" id="sec-layout">
+        <header class="sec-head">
+          <h2><span class="sec-no" data-no="layout">04</span> Layout</h2>
+          <div class="sec-tools">
+            <button type="button" class="tool dice" data-dice="layout" title="Random layout"><span class="sr">Random layout</span></button>
+            <button type="button" class="tool lock" data-lock="layout" aria-pressed="false" title="Keep the layout when you press Surprise me"><span class="sr">Lock layout</span></button>
+          </div>
+        </header>
+        <div class="seg" id="layout-seg" role="radiogroup" aria-label="Layout"></div>
+        <div class="params" id="layout-params"></div>
+        <label class="field field-select">
+          <span class="field-name">Format</span>
+          <select id="size-select"></select>
+        </label>
+      </section>
+
+      <section class="sec" id="sec-finish">
+        <header class="sec-head">
+          <h2><span class="sec-no" data-no="finish">05</span> Finish</h2>
+          <div class="sec-tools">
+            <button type="button" class="tool dice" data-dice="finish" title="Random finish"><span class="sr">Random finish</span></button>
+            <button type="button" class="tool lock" data-lock="finish" aria-pressed="false" title="Keep the finish when you press Surprise me"><span class="sr">Lock finish</span></button>
+          </div>
+        </header>
+        <div class="seg" id="finish-seg" role="radiogroup" aria-label="Finish">
+          <button type="button" role="radio" data-finish="clean">Clean</button>
+          <button type="button" role="radio" data-finish="vintage">Vintage print</button>
+        </div>
+        <div class="params" id="finish-params"></div>
+      </section>
+
+      <section class="sec only-pattern" id="sec-motion">
+        <header class="sec-head"><h2><span class="sec-no" data-no="motion">06</span> Motion</h2></header>
+        <p class="sec-note">Every pattern loops without a seam.</p>
+        <div class="row-btns">
+          <button type="button" class="btn" id="btn-play2" aria-pressed="false">Play</button>
+          <button type="button" class="btn" id="btn-record" title="Record one loop as a WebM video">Record loop</button>
+        </div>
+        <label class="field">
+          <span class="field-name">Speed <output id="speed-out">1x</output></span>
+          <input type="range" id="speed" min="0.25" max="3" step="0.05" value="1">
+        </label>
+      </section>
+
+      <section class="sec" id="sec-save">
+        <header class="sec-head"><h2><span class="sec-no" data-no="save">07</span> Save</h2></header>
+        <p class="sec-note">Picture (PNG)</p>
+        <div class="row-btns" id="png-btns">
+          <button type="button" class="btn" data-png="screen">Screen</button>
+          <button type="button" class="btn" data-png="2k">2K</button>
+          <button type="button" class="btn" data-png="4k">4K</button>
+        </div>
+        <p class="sec-note">Settings (.json)</p>
+        <div class="row-btns">
+          <button type="button" class="btn" id="btn-json">Save settings</button>
+          <button type="button" class="btn" id="btn-load">Load settings</button>
+        </div>
+        <p class="fine">A settings file describes the picture exactly. Load it here later, or use it with the desktop scripts for huge prints and MP4 video.</p>
+      </section>
+
+      <footer class="panel-foot">
+        <p>Runs entirely in your browser. Nothing is uploaded and nothing is tracked.</p>
+      </footer>
+    </aside>
+  </main>
+</div>
+
+<aside class="drawer" id="drawer" aria-label="Favorites" hidden>
+  <header class="drawer-head">
+    <h2>Favorites</h2>
+    <button type="button" class="btn icon-btn" id="drawer-close" aria-label="Close favorites">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19" stroke="currentColor" stroke-width="2"/></svg>
+    </button>
+  </header>
+  <p class="fine" id="fav-note">Click a picture to bring it back. Favorites stay in this browser only.</p>
+  <div class="fav-grid" id="fav-grid"></div>
+  <p class="empty" id="fav-empty">No favorites yet. Press the heart to keep the picture you are looking at.</p>
+  <div class="row-btns drawer-foot">
+    <button type="button" class="btn" id="btn-fav-backup">Back up all</button>
+    <button type="button" class="btn" id="btn-fav-restore">Restore</button>
+  </div>
+</aside>
+
+<dialog class="help" id="help" aria-labelledby="help-title">
+  <div class="help-body">
+    <h2 id="help-title">How it works</h2>
+    <p>Every picture is a grid that has been bent (the <b>warp</b>) with a shape drawn in each tile (the <b>motif</b>), or one of the classic <b>illusions</b>. Everything is black ink on paper, like a print.</p>
+    <ol>
+      <li>Press <b>Surprise me</b> for a fresh random picture.</li>
+      <li>Click the small pictures to change the warp, motif or illusion. Drag the sliders to fine tune.</li>
+      <li>The dice next to a section shuffles just that part. The lock keeps a part fixed when you press Surprise me.</li>
+      <li>Press play to watch a pattern move. Each one loops without a seam. Record loop saves it as a video.</li>
+      <li>Press the heart to keep a picture in your favorites. They live in this browser only, so use Back up all to save them to a file.</li>
+      <li>Save the picture as a PNG, or save its settings file.</li>
+    </ol>
+    <h3>Settings files and seeds</h3>
+    <p>A settings file (.json) describes a picture completely, so loading it brings back exactly the same picture. The number under the picture only seeds the random choices in this app. On its own it will not recreate a picture made with another tool.</p>
+    <h3>Shortcuts</h3>
+    <p class="keys"><kbd>R</kbd> surprise &nbsp; <kbd>Space</kbd> play &nbsp; <kbd>F</kbd> favorite &nbsp; <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo &nbsp; <kbd>Ctrl</kbd>+<kbd>Y</kbd> redo</p>
+    <h3>Privacy</h3>
+    <p>The studio runs entirely on your device. It uses no cookies, no accounts and no tracking, and it sends nothing anywhere.</p>
+    <p class="help-foot"><button class="btn btn-go" type="button" id="help-close">Start making</button></p>
+  </div>
+</dialog>
+
+<div class="busy" id="busy" hidden>
+  <div class="busy-box"><p id="busy-text">Rendering</p><div class="bar-track"><div class="bar-fill" id="busy-fill"></div></div></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="file-in" accept=".json,application/json" hidden>
+<input type="file" id="fav-in" accept=".json,application/json" hidden>
+
+<script src="shaders.js"></script>
+<script src="spec.js"></script>
+<script src="randomize.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

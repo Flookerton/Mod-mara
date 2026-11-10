@@ -1,0 +1,60 @@
+/* Skin 1: vintage print studio. Cream stock, near-black ink, one vermilion spot color,
+   typewriter labels, like a 1970s design manual. */
+
+[data-skin="vintage"] {
+  --bg: #ece3cf;
+  --panel: #f3ecdb;
+  --fg: #1d1b19;
+  --muted: #6e665b;
+  --accent: #c4401f;
+  --on-accent: #f6efde;
+  --line: #1d1b19;
+  --soft: rgba(29, 27, 25, .2);
+  --sel-bg: #1d1b19;
+  --sel-fg: #f3ecdb;
+  color-scheme: light;
+}
+
+[data-skin="vintage"] body {
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .16 0 0 0 0 .13 0 0 0 0 .09 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* masthead */
+[data-skin="vintage"] .bar { padding-top: 12px; padding-bottom: 12px; border-bottom-width: 3px; }
+[data-skin="vintage"] .bar::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -7px; border-bottom: 1px solid var(--line);
+}
+[data-skin="vintage"] .brand-name {
+  font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -.02em; text-transform: none;
+}
+[data-skin="vintage"] .brand-hi {
+  font-family: var(--label); font-weight: 400; font-size: 13px; letter-spacing: .22em; text-transform: uppercase;
+  vertical-align: middle; margin-left: 6px; padding: 3px 6px 2px; background: var(--fg); color: var(--panel);
+}
+
+/* the print on the table */
+[data-skin="vintage"] .stage { background: transparent; }
+[data-skin="vintage"] .frame { box-shadow: 0 1px 1px rgba(40, 30, 15, .18), 0 10px 24px -12px rgba(40, 30, 15, .45); }
+[data-skin="vintage"] .caption { border-top: 1px solid var(--line); padding-top: 6px; }
+
+/* panel: manual pages */
+[data-skin="vintage"] .panel { background: var(--panel); }
+[data-skin="vintage"] .sec { border-bottom: 1px solid var(--line); }
+[data-skin="vintage"] .sec-head h2 { font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+[data-skin="vintage"] .sec-no {
+  display: inline-grid; place-items: center; min-width: 26px; height: 20px; padding: 0 4px;
+  background: var(--fg); color: var(--panel); font-size: 11px; letter-spacing: .04em;
+}
+[data-skin="vintage"] .sec-note { font-style: italic; font-family: Georgia, "Times New Roman", serif; font-size: 13px; }
+[data-skin="vintage"] .help h2, [data-skin="vintage"] .drawer-head h2 { font-weight: 700; letter-spacing: -.02em; }
+[data-skin="vintage"] .thumb canvas { border-color: rgba(29, 27, 25, .35); }
+[data-skin="vintage"] .btn-go { box-shadow: 3px 3px 0 var(--fg); }
+[data-skin="vintage"] .btn-go:active { box-shadow: 1px 1px 0 var(--fg); transform: translate(2px, 2px); }
+[data-skin="vintage"] input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(var(--line), var(--line)) center / 100% 2px no-repeat,
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 10%) center / 100% 8px no-repeat;
+  height: 10px;
+}
+[data-skin="vintage"] input[type="range"]::-webkit-slider-thumb { margin-top: -4px; }
+[data-skin="vintage"] .toast { box-shadow: 3px 3px 0 var(--accent); }

@@ -1,0 +1,160 @@
+/* Skin 2: glitch terminal. Black void, phosphor green, electric blue selection bars,
+   condensed caps with deep green 3D sides, CRT scanlines. Look only. */
+
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/barlow-condensed-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Share Tech Mono"; src: url("../fonts/share-tech-mono.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Studio Runes"; src: url("../fonts/studio-runes.woff2") format("woff2"); font-display: swap; }
+
+[data-skin="glitch"] {
+  --bg: #000;
+  --panel: #050505;
+  --fg: #f2f2f2;
+  --muted: #949494;
+  --accent: #4cf274;
+  --on-accent: #000;
+  --line: #9e9e9e;
+  --soft: #2a2a2a;
+  --sel-bg: #1c1cff;
+  --sel-fg: #f2f2f2;
+  --green: #4cf274;
+  --blue: #1c1cff;
+  --red: #ff4141;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Share Tech Mono", "Courier New", monospace;
+  --label: "Share Tech Mono", "Courier New", monospace;
+  --bw: 1px;
+  color-scheme: dark;
+}
+[data-skin="glitch"] body { background: #000; }
+[data-skin="glitch"] ::selection { background: var(--blue); color: var(--fg); }
+
+/* CRT scanlines over everything, never blocking clicks */
+[data-skin="glitch"] body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px);
+}
+
+/* masthead: condensed caps with deep green sides, runes behind */
+[data-skin="glitch"] .bar { border-bottom-color: #3a3a3a; background: rgba(0, 0, 0, .92); }
+[data-skin="glitch"] .brand { isolation: isolate; padding: 2px 4px; }
+[data-skin="glitch"] .brand-name {
+  position: relative; z-index: 1; display: inline-block;
+  font-family: var(--display); font-weight: 800; font-size: 30px; text-transform: uppercase; letter-spacing: 0; line-height: .9;
+  color: var(--fg);
+  text-shadow: 1px 1px 0 #0e8a43, 2px 2px 0 #0c793b, 3px 3px 0 #0a6331, 4px 4px 0 #084824, 5px 5px 0 #07140c,
+    0 0 18px rgba(76, 242, 116, .28);
+  animation: phosphor 5.3s steps(1) infinite, jolt 7s steps(1) infinite;
+}
+[data-skin="glitch"] .brand-hi { color: var(--green); font-size: .62em; letter-spacing: .02em; }
+[data-skin="glitch"] .brand-runes {
+  display: block; position: absolute; z-index: 0; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  overflow: hidden; white-space: nowrap; font-family: "Studio Runes", var(--label); font-size: 9px; letter-spacing: .3em;
+  line-height: 1.4; color: var(--green); opacity: .3; text-shadow: 0 0 .4em rgba(76, 242, 116, .6); pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  animation: runes 7s steps(1) infinite;
+}
+@keyframes phosphor { 0%, 100% { opacity: 1; } 61% { opacity: .82; } 62% { opacity: 1; } 88% { opacity: .9; } 89% { opacity: 1; } }
+@keyframes jolt {
+  0%, 100% { transform: none; clip-path: none; }
+  83% { transform: translateX(.05em) skewX(-6deg); }
+  84% { transform: translateX(-.035em); clip-path: polygon(0 0, 100% 0, 100% 38%, 0 38%, 0 52%, 100% 52%, 100% 100%, 0 100%); }
+  85% { transform: none; clip-path: none; }
+}
+@keyframes runes { 0%, 100% { opacity: .3; } 83% { opacity: .75; } 86% { opacity: .3; } }
+
+/* buttons */
+[data-skin="glitch"] .btn {
+  border-color: var(--line); background: #000; font-size: 12px; letter-spacing: .1em;
+  transition: background .12s steps(2), color .12s steps(2);
+}
+[data-skin="glitch"] .btn:hover { background: var(--fg); color: #000; border-color: var(--fg); }
+[data-skin="glitch"] .btn:disabled:hover { background: #000; color: var(--fg); border-color: var(--line); }
+[data-skin="glitch"] .btn-go {
+  background: var(--green); border-color: var(--green); color: #000;
+  font-family: var(--display); font-weight: 800; font-size: 19px; letter-spacing: .02em; padding-top: 4px; padding-bottom: 4px;
+}
+[data-skin="glitch"] .btn-go:hover { background: var(--fg); border-color: var(--fg); color: #000; }
+[data-skin="glitch"] .btn-go::before { content: "> "; white-space: pre; }
+[data-skin="glitch"] .help .btn-go::before { content: none; }
+[data-skin="glitch"] #btn-fav[aria-pressed="true"] { color: var(--red); }
+[data-skin="glitch"] .btn.rec { background: var(--red); border-color: var(--red); color: #000; }
+
+/* the picture in a thin gray window with green corner brackets */
+/* the art sits above the scanlines so the picture stays true */
+[data-skin="glitch"] .frame { outline: 1px solid #3a3a3a; outline-offset: 8px; z-index: 61; }
+[data-skin="glitch"] .crop { width: 16px; height: 16px; border-color: var(--green) !important; border-width: 0; }
+[data-skin="glitch"] .crop.tl { left: -9px; top: -9px; border-left: 2px solid; border-top: 2px solid; border-right: 0; border-bottom: 0; }
+[data-skin="glitch"] .crop.tr { right: -9px; top: -9px; border-right: 2px solid; border-top: 2px solid; border-left: 0; border-bottom: 0; }
+[data-skin="glitch"] .crop.bl { left: -9px; bottom: -9px; border-left: 2px solid; border-bottom: 2px solid; border-right: 0; border-top: 0; }
+[data-skin="glitch"] .crop.br { right: -9px; bottom: -9px; border-right: 2px solid; border-bottom: 2px solid; border-left: 0; border-top: 0; }
+[data-skin="glitch"] .caption { color: var(--muted); }
+[data-skin="glitch"] .caption-name { color: var(--green); }
+[data-skin="glitch"] .caption-name::before { content: "> "; }
+
+/* panel: stacked windows with title strips */
+[data-skin="glitch"] .panel { background: #000; border-left-color: #3a3a3a; padding-top: 12px; }
+[data-skin="glitch"] .sec { border: 1px solid var(--line); padding: 0 12px 14px; margin-top: 12px; }
+[data-skin="glitch"] .sec-head {
+  margin: 0 -12px 0; padding: 6px 8px 6px 12px; border-bottom: 1px solid var(--line);
+}
+[data-skin="glitch"] .sec-head h2 {
+  font-family: var(--label); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--fg); font-weight: 400;
+}
+[data-skin="glitch"] .sec-no { color: var(--green); }
+[data-skin="glitch"] .sec-no::after { content: " //"; color: var(--muted); }
+[data-skin="glitch"] .sec-note { margin-top: 10px; }
+[data-skin="glitch"] .sec-note::before { content: "> "; color: var(--green); }
+[data-skin="glitch"] .tool { width: 28px; height: 28px; border-color: #3a3a3a; }
+[data-skin="glitch"] .tool:hover { background: var(--fg); color: #000; }
+[data-skin="glitch"] .tool.lock[aria-pressed="true"] { background: var(--green); color: #000; }
+
+/* selection = solid electric-blue bar marked // */
+[data-skin="glitch"] .seg { border-color: var(--line); }
+[data-skin="glitch"] .seg > button { border-right-color: #3a3a3a; }
+[data-skin="glitch"] .seg > button[aria-checked="true"] { background: var(--blue); color: var(--fg); }
+[data-skin="glitch"] .seg > button[aria-checked="true"]::before { content: "// "; white-space: pre; }
+[data-skin="glitch"] .seg > button:hover:not([aria-checked="true"]) { background: #1a1a1a; }
+[data-skin="glitch"] .thumb canvas { border-color: #2a2a2a; }
+[data-skin="glitch"] .thumb[aria-checked="true"] canvas { outline-color: var(--blue); outline-width: 3px; }
+[data-skin="glitch"] .thumb[aria-checked="true"] .thumb-label { color: var(--green); font-weight: 400; }
+[data-skin="glitch"] .thumb[aria-checked="true"] .thumb-label::before { content: "// "; }
+[data-skin="glitch"] .thumb:hover canvas { border-color: var(--green); }
+[data-skin="glitch"] .chip { border-color: #3a3a3a; }
+[data-skin="glitch"] .chip[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); }
+[data-skin="glitch"] .swatch[aria-checked="true"] { outline-color: var(--green); }
+[data-skin="glitch"] .check-box { border-color: var(--line); }
+[data-skin="glitch"] .check input:checked + .check-box { background: var(--green); }
+[data-skin="glitch"] .check input:checked + .check-box::after { background: #000; }
+[data-skin="glitch"] select { background: #000; border-color: var(--line); }
+[data-skin="glitch"] .field-name output { color: var(--green); font-weight: 400; }
+[data-skin="glitch"] .thumb-label { font-size: 11px; }
+[data-skin="glitch"] input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: #9e9e9e; }
+[data-skin="glitch"] input[type="range"]::-moz-range-track { height: 2px; background: #9e9e9e; }
+[data-skin="glitch"] input[type="range"]::-webkit-slider-thumb { width: 10px; height: 18px; margin-top: -9px; background: var(--green); box-shadow: 0 0 10px rgba(76, 242, 116, .5); }
+[data-skin="glitch"] input[type="range"]::-moz-range-thumb { width: 10px; height: 18px; background: var(--green); }
+[data-skin="glitch"] .panel-foot { border-top: 1px solid #3a3a3a; margin-top: 14px; }
+
+/* overlays */
+[data-skin="glitch"] .drawer { background: #000; border-left-color: var(--line); box-shadow: -18px 0 40px rgba(76, 242, 116, .08); }
+[data-skin="glitch"] .drawer-head { background: #000; border-bottom-color: var(--line); }
+[data-skin="glitch"] .drawer-head h2, [data-skin="glitch"] .help h2 {
+  font-weight: 800; text-transform: uppercase; font-size: 28px; line-height: .95;
+  text-shadow: 1px 1px 0 #0e8a43, 2px 2px 0 #0c793b, 3px 3px 0 #0a6331, 4px 4px 0 #07140c;
+}
+[data-skin="glitch"] .help h3 { font-weight: 800; text-transform: uppercase; color: var(--green); font-size: 18px; }
+[data-skin="glitch"] .help { background: #000; border-color: var(--line); }
+[data-skin="glitch"] .help::backdrop { background: rgba(0, 0, 0, .7); }
+[data-skin="glitch"] .fav-x { background: #000; border-color: #3a3a3a; }
+[data-skin="glitch"] .busy-box { background: #000; }
+[data-skin="glitch"] .bar-fill { background: var(--green); }
+[data-skin="glitch"] .toast { background: #000; color: var(--green); border: 1px solid var(--green); }
+[data-skin="glitch"] .toast::before { content: "> "; }
+[data-skin="glitch"] .drop-hint { border-color: var(--green); color: var(--green); background: rgba(0, 0, 0, .85); }
+[data-skin="glitch"] kbd { border-color: var(--green); color: var(--green); }
+
+@media (max-width: 760px) {
+  [data-skin="glitch"] .brand-name { font-size: 26px; }
+  [data-skin="glitch"] .btn-go { font-size: 17px; }
+  [data-skin="glitch"] .panel { padding-top: 0; }
+}
