@@ -1,4 +1,5 @@
-/* Applies the saved look before the page paints. A link can also pick it: ?skin=glitch */
+/* Applies the saved look before the page paints (the terminal look is the default).
+   A link can also pick it: ?skin=vintage */
 (function () {
   var s = null;
   try { s = window.localStorage.getItem("opart-studio-skin"); } catch (e) { /* storage blocked */ }

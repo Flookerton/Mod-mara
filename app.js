@@ -103,10 +103,41 @@
     applySpec(JSON.parse(state.hist[state.hi]), false);
   }
 
+  // ---------------------------------------------------------------- finish belongs to the look
+  // Print look: clean or vintage print. Terminal look: phosphor only.
+  // A picture from the other look keeps its pattern and gets this look's finish
+  // (the one you last used here, or the default).
+  function finishFits(f) {
+    var name = f && f.name;
+    return isGlitch() ? name === "phosphor" : (name === "clean" || name === "vintage");
+  }
+  function finishForLook(f) {
+    if (finishFits(f)) return f;
+    if (isGlitch()) return state.stash.screenFinish ? clone(state.stash.screenFinish) : S.defaultFinish("phosphor");
+    return state.stash.printFinish ? clone(state.stash.printFinish) : S.defaultFinish("vintage");
+  }
+  // remember the finish being replaced so switching back restores it
+  function stashFinish(f) {
+    if (!f || !f.name) return;
+    if (f.name === "phosphor") state.stash.screenFinish = clone(f);
+    else state.stash.printFinish = clone(f);
+  }
+  function fitToLook(spec) {
+    if (!finishFits(spec.finish)) { stashFinish(spec.finish); spec.finish = finishForLook(spec.finish); }
+    return spec;
+  }
+  // the same picture as this look would show it, without remembering anything (previews, comparisons)
+  function viewSpec(spec) {
+    if (finishFits(spec.finish)) return spec;
+    var v = clone(spec);
+    v.finish = finishForLook(spec.finish);
+    return v;
+  }
+
   // replace the whole picture
   function applySpec(spec, push) {
     var oldMotif = JSON.stringify(state.spec.motif || null);
-    state.spec = spec;
+    state.spec = fitToLook(spec);
     if (spec.kind === "illusion") state.stash.illusion = spec.illusion;
     else { state.stash.warp = spec.warp; state.stash.motif = spec.motif; }
     if (push !== false) pushHistory(); else { updateHistoryButtons(); store.set(STATE_KEY, JSON.stringify(spec)); }
@@ -878,8 +909,8 @@
   }
   function key(spec) { return JSON.stringify(spec); }
   function favIndex(spec) {
-    var k = key(spec);
-    for (var i = 0; i < favs.length; i++) if (key(favs[i].spec) === k) return i;
+    var k = key(viewSpec(spec));
+    for (var i = 0; i < favs.length; i++) if (key(viewSpec(favs[i].spec)) === k) return i;
     return -1;
   }
   function updateFavButton() {
@@ -927,7 +958,7 @@
       item.appendChild(x);
       grid.appendChild(item);
       var info = S.sizeInfo(f.spec.size), a = info[2] / info[3];
-      queueThumb(cv, f.spec, a >= 1 ? [px, Math.round(px / a)] : [Math.round(px * a), px]);
+      queueThumb(cv, viewSpec(f.spec), a >= 1 ? [px, Math.round(px / a)] : [Math.round(px * a), px]);
     });
   }
   function openDrawer() {
@@ -1009,17 +1040,10 @@
   function setSkin(s) {
     document.documentElement.setAttribute("data-skin", s);
     store.set(SKIN_KEY, s);
-    var sp = clone(state.spec), f = sp.finish || {};
-    if (s === "glitch" && f.name !== "phosphor") {
-      state.stash.printFinish = f;
-      sp.finish = state.stash.screenFinish ? clone(state.stash.screenFinish) : S.defaultFinish("phosphor");
-      applySpec(sp);
-    } else if (s === "vintage" && f.name === "phosphor") {
-      state.stash.screenFinish = f;
-      sp.finish = state.stash.printFinish ? clone(state.stash.printFinish) : S.defaultFinish("vintage");
-      applySpec(sp);
-    }
+    if (!finishFits(state.spec.finish)) applySpec(clone(state.spec));
+    else refreshAll();
     queueStaticThumbs();
+    if (!$("drawer").hidden) renderFavs();
   }
 
   // ---------------------------------------------------------------- wire up
@@ -1137,11 +1161,8 @@
     if (last) { try { state.spec = S.sanitize(JSON.parse(last)); } catch (e) { /* use the default */ } }
     if (state.spec.kind === "illusion") state.stash.illusion = state.spec.illusion;
     else { state.stash.warp = state.spec.warp; state.stash.motif = state.spec.motif; }
-    // the terminal look shows the art as a phosphor screen
-    if (isGlitch() && (!state.spec.finish || state.spec.finish.name !== "phosphor")) {
-      state.stash.printFinish = state.spec.finish;
-      state.spec.finish = S.defaultFinish("phosphor");
-    }
+    // the remembered picture is shown with this look's finish
+    fitToLook(state.spec);
     buildThumbs("warp", S.WARP_IDS, S.WARPS, function (id) {
       var sp = clone(state.spec);
       sp.warp = S.defaultWarp(id);

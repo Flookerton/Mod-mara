@@ -4,8 +4,8 @@
   --bg: #efe7d4;
   --panel: #f4eddc;
   --fg: #1d1b19;
-  --muted: #6b645a;
-  --accent: #c4401f;
+  --muted: #655d52;
+  --accent: #b33a1b;
   --on-accent: #f6efde;
   --line: #1d1b19;
   --soft: rgba(29, 27, 25, .18);
@@ -157,6 +157,9 @@ body.dragging .drop-hint { display: flex; }
 .seg > button:hover:not([aria-checked="true"]) { background: var(--soft); }
 .seg.small > button { min-height: 32px; font-size: 11px; }
 #kind-seg, #layout-seg, #finish-seg { margin-top: 12px; }
+/* each look offers only its own finishes */
+[data-skin="vintage"] #finish-seg [data-finish="phosphor"],
+[data-skin="glitch"] #finish-seg { display: none; }
 .seg.speeds { margin-top: 8px; }
 .hud { display: none; }
 
