@@ -157,6 +157,8 @@ body.dragging .drop-hint { display: flex; }
 .seg > button:hover:not([aria-checked="true"]) { background: var(--soft); }
 .seg.small > button { min-height: 32px; font-size: 11px; }
 #kind-seg, #layout-seg, #finish-seg { margin-top: 12px; }
+.seg.speeds { margin-top: 8px; }
+.hud { display: none; }
 
 /* thumbnails */
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; margin: 4px 0 6px; }

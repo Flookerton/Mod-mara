@@ -162,6 +162,13 @@
   function randomFinish(r, name) {
     name = name || r.pick(["clean", "vintage", "vintage"]);
     if (name === "clean") return { name: "clean" };
+    if (name === "phosphor") {
+      return {
+        name: "phosphor", color: r.pick([S.PHOSPHORS[0], S.PHOSPHORS[0], S.PHOSPHORS[0], S.PHOSPHORS[1], S.PHOSPHORS[2]]).slice(),
+        glow: r.u(0.4, 0.9), scanlines: r.u(0.4, 0.8), bleed: r.u(0.2, 0.7), vignette: r.u(0.3, 0.7),
+        noise: r.u(0.2, 0.6), afterglow: r.u(0.4, 0.8)
+      };
+    }
     return {
       name: "vintage", paper: r.pick(S.PAPERS).slice(), ink: r.pick(S.INKS).slice(),
       blur: r.u(0.4, 0.9), specks: r.u(0.5, 1.5), grain: r.u(0.7, 1.3), wear: r.u(0.4, 1.2)
@@ -183,7 +190,7 @@
   function newSeed() { return 1 + Math.floor(Math.random() * 99999998); }
 
   // locks: {kind, warp, motif, illusion, layout, finish}: true keeps that part of `cur`
-  function surprise(cur, locks, seed) {
+  function surprise(cur, locks, seed, finishName) {
     seed = seed || newSeed();
     var r = R(seed);
     locks = locks || {};
@@ -200,7 +207,7 @@
       if (!keepW) spec.warp = fitCells(spec.warp, spec.motif.name);
     }
     spec.layout = locks.layout ? cur.layout : randomLayout(r);
-    spec.finish = locks.finish ? cur.finish : randomFinish(r);
+    spec.finish = locks.finish ? cur.finish : randomFinish(r, finishName);
     spec.size = cur.size || "square";
     return JSON.parse(JSON.stringify(spec));
   }

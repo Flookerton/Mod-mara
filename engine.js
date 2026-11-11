@@ -27,8 +27,10 @@
     return { prog: p, u: u };
   }
 
-  var COV_U = ["uRes", "uSS", "uT", "uP", "uKind", "uWarp", "uMotif", "uIll", "uWP", "uMP", "uIP", "uPoly", "uBox", "uList", "uLay", "uLay2"];
-  var FIN_U = ["uCov", "uRes", "uVintage", "uPaper", "uInk", "uBlur", "uSpecks", "uGrain", "uWear", "uSeed", "uLines", "uNLines", "uLineW"];
+  var COV_U = ["uRes", "uSS", "uT", "uP", "uKind", "uWarp", "uMotif", "uIll", "uWP", "uMP", "uIP", "uPoly", "uBox", "uList", "uLay", "uLay2", "uCam"];
+  var FIN_U = ["uCov", "uRes", "uVintage", "uPaper", "uInk", "uBlur", "uSpecks", "uGrain", "uWear", "uSeed", "uLines", "uNLines", "uLineW", "uGlow", "uScan", "uBleed", "uVig"];
+  var TRAIL_U = ["uCur", "uPrev", "uDecay", "uBg"];
+  var NO_CAM = [1, 0, 1, 0];
 
   function Engine(canvas) {
     this.canvas = canvas;
@@ -47,6 +49,9 @@
     var gl = this.gl;
     this.cov = program(gl, SH.VERT, SH.COVERAGE, COV_U);
     this.fin = program(gl, SH.VERT, SH.FINISH, FIN_U);
+    this.trail = program(gl, SH.VERT, SH.TRAIL, TRAIL_U);
+    this.trailIndex = 0;
+    this.trailFresh = false;
     this.vao = gl.createVertexArray();
     this.maxTex = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
     var vp = gl.getParameter(gl.MAX_VIEWPORT_DIMS);
@@ -82,7 +87,7 @@
     delete this.targets[name];
   };
 
-  Engine.prototype.setCoverage = function (P, W, H, ss, t) {
+  Engine.prototype.setCoverage = function (P, W, H, ss, t, cam) {
     var gl = this.gl, u = this.cov.u;
     gl.useProgram(this.cov.prog);
     gl.uniform2f(u.uRes, W, H);
@@ -101,6 +106,7 @@
     gl.uniform4fv(u.uList, P.LIST);
     gl.uniform4fv(u.uLay, P.lay);
     gl.uniform4fv(u.uLay2, P.lay2);
+    gl.uniform4fv(u.uCam, cam || NO_CAM);
   };
 
   Engine.prototype.setFinish = function (P, W, H, covTex) {
@@ -110,7 +116,7 @@
     gl.bindTexture(gl.TEXTURE_2D, covTex);
     gl.uniform1i(u.uCov, 0);
     gl.uniform2f(u.uRes, W, H);
-    gl.uniform1i(u.uVintage, f.vintage ? 1 : 0);
+    gl.uniform1i(u.uVintage, f.mode);
     gl.uniform3f(u.uPaper, f.paper[0], f.paper[1], f.paper[2]);
     gl.uniform3f(u.uInk, f.ink[0], f.ink[1], f.ink[2]);
     gl.uniform1f(u.uBlur, f.blur);
@@ -123,23 +129,57 @@
     gl.uniform4fv(u.uLines, L);
     gl.uniform1i(u.uNLines, f.lines.length);
     gl.uniform1f(u.uLineW, f.lineW);
+    gl.uniform1f(u.uGlow, f.glow);
+    gl.uniform1f(u.uScan, f.scan);
+    gl.uniform1f(u.uBleed, f.bleed);
+    gl.uniform1f(u.uVig, f.vig);
   };
 
   // Render to the visible canvas at its current pixel size.
-  Engine.prototype.renderView = function (spec, ss, t) {
+  // opts.cam: camera move [cos, sin, zoom, 0]; opts.trail: afterglow 0..1 (only while moving)
+  Engine.prototype.renderView = function (spec, ss, t, opts) {
     if (this.lost) return;
+    opts = opts || {};
     var gl = this.gl, W = this.canvas.width, H = this.canvas.height;
     var P = SP.pack(spec, W, H);
     var cov = this.target("view", W, H, "r8");
     gl.bindVertexArray(this.vao);
     gl.bindFramebuffer(gl.FRAMEBUFFER, cov.fb);
     gl.viewport(0, 0, W, H);
-    this.setCoverage(P, W, H, ss, t);
+    this.setCoverage(P, W, H, ss, t, opts.cam);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, W, H);
+    var trail = opts.trail || 0;
+    if (!(trail > 0)) {
+      this.trailFresh = false;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      this.setFinish(P, W, H, cov.tex);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      return;
+    }
+    // afterglow: finish into a texture, mix with a fading copy of the last frame, then show it
+    var cur = this.target("viewRGB", W, H, "rgba");
+    gl.bindFramebuffer(gl.FRAMEBUFFER, cur.fb);
     this.setFinish(P, W, H, cov.tex);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    var k = this.trailIndex, a = this.target("trail" + k, W, H, "rgba"), b = this.target("trail" + (1 - k), W, H, "rgba");
+    var u = this.trail.u, bg = P.finish.paper;
+    gl.useProgram(this.trail.prog);
+    gl.uniform1i(u.uCur, 0);
+    gl.uniform1i(u.uPrev, 1);
+    gl.uniform3f(u.uBg, bg[0], bg[1], bg[2]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, a.fb);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, cur.tex);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, b.tex);
+    gl.uniform1f(u.uDecay, this.trailFresh ? Math.min(0.97, trail) : 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, a.tex);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, a.tex);
+    gl.uniform1f(u.uDecay, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.activeTexture(gl.TEXTURE0);
+    this.trailIndex = 1 - k;
+    this.trailFresh = true;
   };
 
   // Small synchronous render into a 2D canvas (thumbnails, favorites).
@@ -170,7 +210,7 @@
   function nextFrame() { return new Promise(function (r) { setTimeout(r, 0); }); }
 
   // Big render in tiles so the GPU never gets one huge job. Returns a 2D canvas.
-  Engine.prototype.renderLarge = async function (spec, W, H, ss, t, progress) {
+  Engine.prototype.renderLarge = async function (spec, W, H, ss, t, progress, cam) {
     var gl = this.gl;
     if (W > this.maxTex || H > this.maxTex) throw new Error("This device can make pictures up to " + this.maxTex + " pixels wide.");
     var P = SP.pack(spec, W, H);
@@ -187,7 +227,7 @@
         gl.bindFramebuffer(gl.FRAMEBUFFER, cov.fb);
         gl.viewport(0, 0, W, H);
         gl.scissor(tl[0], tl[1], tl[2], tl[3]);
-        this.setCoverage(P, W, H, ss, t);
+        this.setCoverage(P, W, H, ss, t, cam);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.flush();
         if (progress) progress(++done / total);

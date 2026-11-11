@@ -251,6 +251,9 @@
   var LAYOUTS = [["margin", "Margin"], ["full", "Full bleed"], ["circle", "Circle"]];
   var PAPERS = [[241, 233, 214], [238, 228, 205], [244, 239, 226]];
   var INKS = [[27, 25, 24], [22, 22, 26], [35, 30, 26]];
+  // phosphor screen colors: green, amber, ice
+  var PHOSPHORS = [[76, 242, 116], [255, 176, 40], [150, 220, 255]];
+  var TUBE = [4, 10, 6];
 
   // picture formats: names match the Python presets so exported files work there
   var SIZES = [
@@ -318,6 +321,7 @@
   }
   function defaultFinish(name) {
     if (name === "vintage") return { name: "vintage", paper: [241, 233, 214], ink: [27, 25, 24], blur: 0.6, specks: 1.0, grain: 1.0, wear: 1.0 };
+    if (name === "phosphor") return { name: "phosphor", color: [76, 242, 116], glow: 0.6, scanlines: 0.6, bleed: 0.4, vignette: 0.5, noise: 0.4, afterglow: 0.6 };
     return { name: "clean" };
   }
   function defaultSpec() {
@@ -463,6 +467,13 @@
   }
   function cleanFinish(f) {
     if (!f || typeof f !== "object") return defaultFinish("clean");
+    if (f.name === "phosphor") {
+      return {
+        name: "phosphor", color: color(f.color, [76, 242, 116]),
+        glow: num(f.glow, 0.6, [0, 1.5]), scanlines: num(f.scanlines, 0.6, [0, 1]), bleed: num(f.bleed, 0.4, [0, 2]),
+        vignette: num(f.vignette, 0.5, [0, 1]), noise: num(f.noise, 0.4, [0, 2]), afterglow: num(f.afterglow, 0.6, [0, 0.95])
+      };
+    }
     if (f.name === "vintage") {
       return {
         name: "vintage", paper: color(f.paper, [241, 233, 214]), ink: color(f.ink, [27, 25, 24]),
@@ -725,9 +736,15 @@
 
   function packFinish(f, seed, W, H) {
     var base = Math.min(W, H);
-    var out = { vintage: false, paper: [255, 255, 255], ink: [0, 0, 0], blur: 0, specks: 0, grain: 0, wear: 0, lines: [], lineW: 1 };
-    if (f && f.name === "vintage") {
-      out.vintage = true;
+    var out = { mode: 0, paper: [255, 255, 255], ink: [0, 0, 0], blur: 0, specks: 0, grain: 0, wear: 0, lines: [], lineW: 1,
+      glow: 0, scan: 0, bleed: 0, vig: 0, afterglow: 0 };
+    if (f && f.name === "phosphor") {
+      out.mode = 2;
+      out.ink = g(f, "color", [76, 242, 116]); out.paper = TUBE;
+      out.glow = g(f, "glow", 0.6); out.scan = g(f, "scanlines", 0.6); out.bleed = g(f, "bleed", 0.4);
+      out.vig = g(f, "vignette", 0.5); out.grain = g(f, "noise", 0.4); out.afterglow = g(f, "afterglow", 0.6);
+    } else if (f && f.name === "vintage") {
+      out.mode = 1;
       out.paper = g(f, "paper", [241, 233, 214]); out.ink = g(f, "ink", [27, 25, 24]);
       out.blur = g(f, "blur", 0.6) * Math.max(1, base / 2000);
       out.specks = g(f, "specks", 1.0); out.grain = g(f, "grain", 1.0); out.wear = g(f, "wear", 1.0);
@@ -777,7 +794,7 @@
   }
 
   window.OpArtSpec = {
-    WARPS: WARPS, MOTIFS: MOTIFS, ILLUSIONS: ILLUSIONS, LAYOUTS: LAYOUTS, SIZES: SIZES, PAPERS: PAPERS, INKS: INKS,
+    WARPS: WARPS, MOTIFS: MOTIFS, ILLUSIONS: ILLUSIONS, LAYOUTS: LAYOUTS, SIZES: SIZES, PAPERS: PAPERS, INKS: INKS, PHOSPHORS: PHOSPHORS, TUBE: TUBE,
     SATO_KIT: SATO_KIT, SATO_LABELS: SATO_LABELS, TRIBAR_TONES: TRIBAR_TONES, CUBE_TONES: CUBE_TONES,
     GRADE_MOTIFS: GRADE_MOTIFS, WARP_IDS: WARP_IDS, MOTIF_IDS: MOTIF_IDS, ILL_IDS: ILL_IDS,
     defaultWarp: defaultWarp, defaultMotif: defaultMotif, defaultIllusion: defaultIllusion,

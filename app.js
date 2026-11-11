@@ -6,6 +6,7 @@
   var FAV_KEY = "opart-studio-favorites-v1";
   var SKIN_KEY = "opart-studio-skin";
   var STATE_KEY = "opart-studio-last-v1";
+  var MOTION_KEY = "opart-studio-motion-v1";
   var MAX_FAVS = 300;
   var MAX_FILE = 2 * 1024 * 1024;
 
@@ -33,13 +34,31 @@
     stash: {},
     playing: false,
     t: 0,
-    speed: 1,
+    motion: loadMotion(),
     hist: [],
     hi: -1,
     recording: null
   };
   var engine = null;
   var canvas = $("view");
+  function isGlitch() { return document.documentElement.getAttribute("data-skin") === "glitch"; }
+
+  // motion settings are a viewing preference, kept in this browser (not part of the picture's settings)
+  function loadMotion() {
+    var m = { speed: 1, dir: 1, style: "smooth", flow: true, camera: "none" };
+    try {
+      var d = JSON.parse(store.get(MOTION_KEY) || "null");
+      if (d && typeof d === "object") {
+        if (typeof d.speed === "number" && isFinite(d.speed)) m.speed = Math.min(12, Math.max(0.1, d.speed));
+        if (d.dir === -1) m.dir = -1;
+        if (["smooth", "bounce", "stepped"].indexOf(d.style) >= 0) m.style = d.style;
+        if (d.flow === false) m.flow = false;
+        if (["none", "spin", "sway", "breathe", "tumble"].indexOf(d.camera) >= 0) m.camera = d.camera;
+      }
+    } catch (e) { /* use the defaults */ }
+    return m;
+  }
+  function saveMotion() { store.set(MOTION_KEY, JSON.stringify(state.motion)); }
 
   // ---------------------------------------------------------------- toast and busy overlay
   var toastTimer = 0;
@@ -153,18 +172,45 @@
   function requestRender() { dirty = true; hiDone = false; lastChange = performance.now(); }
   function liveSS() { return canvas.width * canvas.height > 900000 ? 1 : 2; }
   function hiSS() { return canvas.width * canvas.height > 2200000 ? 2 : 3; }
+  // ---------------------------------------------------------------- motion
+  // state.t is the loop position 0..1. Style reshapes it, the pattern flows with it (if on),
+  // and the camera move turns or zooms the whole picture with it. Every option loops seamlessly.
+  var STEPS = 12;
+  function phase() {
+    var t = state.t, m = state.motion;
+    if (m.style === "bounce") return t < 0.5 ? 2 * t : 2 - 2 * t;
+    if (m.style === "stepped") return Math.floor(t * STEPS) / STEPS;
+    return t;
+  }
+  function patternT() { return state.spec.kind === "pattern" && state.motion.flow ? phase() : 0; }
+  function camera() {
+    var p = phase(), TAU = Math.PI * 2, a = 0, z = 1, c = state.motion.camera;
+    if (c === "spin") a = TAU * p;
+    else if (c === "sway") a = 0.26 * Math.sin(TAU * p);
+    else if (c === "breathe") z = Math.exp(0.22 * Math.sin(TAU * p));
+    else if (c === "tumble") { a = TAU * p; z = Math.exp(0.18 * Math.sin(2 * TAU * p)); }
+    return [Math.cos(a), Math.sin(a), z, 0];
+  }
+  function moving() {
+    var m = state.motion;
+    return m.camera !== "none" || (state.spec.kind === "pattern" && m.flow);
+  }
   function draw(ss) {
     if (!engine) return;
-    try { engine.renderView(state.spec, ss, state.spec.kind === "pattern" ? state.t : 0); }
+    var f = state.spec.finish, trail = state.playing && f && f.name === "phosphor" ? (f.afterglow || 0) : 0;
+    try { engine.renderView(state.spec, ss, patternT(), { cam: camera(), trail: trail }); }
     catch (e) { console.error(e); }
   }
+  var hudTick = 0;
   function frame(now) {
     var dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0;
     lastFrame = now;
-    if (state.playing && state.spec.kind === "pattern") {
-      state.t = (state.t + dt * state.speed / LOOP_SECONDS) % 1;
+    if (state.playing && moving()) {
+      var m = state.motion;
+      state.t = ((state.t + m.dir * dt * m.speed / LOOP_SECONDS) % 1 + 1) % 1;
       draw(state.recording ? 2 : liveSS());
       hiDone = false;
+      if (now - hudTick > 100) { hudTick = now; updateHud(); }
     } else if (dirty) {
       draw(liveSS());
       dirty = false;
@@ -194,8 +240,8 @@
   }
   function thumbPx() { return Math.round(76 * Math.min(window.devicePixelRatio || 1, 2)); }
   function uiFinish() {
-    return document.documentElement.getAttribute("data-skin") === "glitch"
-      ? { name: "clean", ink: [0, 0, 0], paper: [208, 208, 208] }
+    return isGlitch()
+      ? { name: "clean", ink: [76, 242, 116], paper: [4, 10, 6] }
       : { name: "clean", ink: [27, 25, 24], paper: [241, 233, 214] };
   }
 
@@ -561,6 +607,16 @@
           function (v) { f[d[0]] = v; changed(false); }, function (v) { f[d[0]] = v; changed(true); }));
       });
       box.appendChild(actionRow("New specks", function () { state.spec.seed = RND.newSeed(); changed(true, true); }));
+    } else if (f.name === "phosphor") {
+      box.appendChild(swatchField("Phosphor", S.PHOSPHORS, f.color, function (c) { f.color = c; changed(true, true); }));
+      [["glow", "Glow", 0, 1.5, 0.01], ["scanlines", "Scanlines", 0, 1, 0.01], ["bleed", "Color bleed", 0, 2, 0.01],
+        ["vignette", "Dark corners", 0, 1, 0.01], ["noise", "Static", 0, 2, 0.01], ["afterglow", "Afterglow (when moving)", 0, 0.95, 0.01]].forEach(function (d) {
+        var p = { type: "n", step: d[4] };
+        box.appendChild(rangeField(d[1], f[d[0]] !== undefined ? f[d[0]] : 0.5, d[2], d[3], d[4], p,
+          function (v) { f[d[0]] = v; changed(false); }, function (v) { f[d[0]] = v; changed(true); }));
+      });
+      var note = el("p", "fine", "A screen look. The desktop scripts print it as clean black and white.");
+      box.appendChild(note);
     } else {
       var inv = f.ink && f.ink[0] > 128;
       box.appendChild(segField("Colors", [["bw", "Black on white"], ["wb", "White on black"]], inv ? "wb" : "bw", function (v) {
@@ -574,6 +630,20 @@
   function updateCaption() {
     $("caption-name").textContent = S.describe(state.spec);
     $("caption-seed").textContent = "No. " + state.spec.seed;
+    updateHud();
+  }
+  // the terminal look's readout in the corners of the picture (not part of saved pictures)
+  function updateHud() {
+    var sp = state.spec, m = state.motion;
+    $("hud-tl").textContent = "> " + S.describe(sp).toUpperCase();
+    $("hud-tr").textContent = "SEED " + String(sp.seed).padStart(8, "0");
+    $("hud-bl").textContent = (state.playing ? "RUN " : "HOLD ") + "T " + phase().toFixed(3) + "  " + fmtSpeed(m.speed);
+    $("hud-br").textContent = state.recording ? "\u25cf REC" : (sp.finish && sp.finish.name ? sp.finish.name.toUpperCase() : "");
+  }
+  function fmtSpeed(v) {
+    var t = v < 1 ? v.toFixed(2) : v < 10 ? v.toFixed(1) : v.toFixed(0);
+    if (t.indexOf(".") >= 0) t = t.replace(/\.?0+$/, "");
+    return t + "x";
   }
   function refreshAll() {
     var panel = $("panel"), keepPanel = panel.scrollTop, keepX = window.scrollX, keepY = window.scrollY;
@@ -594,8 +664,8 @@
       buildParams("motif", sp.motif, S.MOTIFS[sp.motif.name]);
     } else {
       buildParams("illusion", sp.illusion, S.ILLUSIONS[sp.illusion.name]);
-      if (state.playing) setPlaying(false);
     }
+    buildMotion();
     buildLayout();
     buildFinish();
     markThumbs();
@@ -608,7 +678,6 @@
       var no = s.querySelector(".sec-no");
       if (no) no.textContent = String(++n).padStart(2, "0");
     });
-    $("btn-play").disabled = sp.kind !== "pattern";
     Array.prototype.forEach.call(document.querySelectorAll("[data-lock]"), function (b) {
       b.setAttribute("aria-pressed", state.locks[b.dataset.lock] ? "true" : "false");
     });
@@ -616,7 +685,7 @@
 
   // ---------------------------------------------------------------- actions
   function surprise() {
-    var spec = RND.surprise(state.spec, state.locks);
+    var spec = RND.surprise(state.spec, state.locks, null, isGlitch() ? "phosphor" : undefined);
     state.t = 0;
     applySpec(spec);
   }
@@ -632,7 +701,7 @@
     else if (which === "motif") sp.motif = RND.randomMotif(r);
     else if (which === "illusion") sp.illusion = RND.randomIllusion(r);
     else if (which === "layout") sp.layout = RND.randomLayout(r);
-    else if (which === "finish") { sp.finish = RND.randomFinish(r); sp.seed = RND.newSeed(); }
+    else if (which === "finish") { sp.finish = RND.randomFinish(r, isGlitch() ? "phosphor" : undefined); sp.seed = RND.newSeed(); }
     applySpec(sp);
   }
   function pickKind(kind) {
@@ -651,7 +720,13 @@
   }
 
   function setPlaying(p) {
-    if (p && state.spec.kind !== "pattern") { toast("Illusions stay still. Pick a pattern to animate."); p = false; }
+    if (p && !moving()) {
+      // illusions (or a pattern with its flow off) move with a camera move
+      state.motion.camera = "breathe";
+      saveMotion();
+      buildMotion();
+      toast("Picked the Breathe camera move so the picture can move.");
+    }
     state.playing = p;
     ["btn-play", "btn-play2"].forEach(function (id) {
       var b = $(id);
@@ -661,6 +736,51 @@
     $("btn-play2").textContent = p ? "Pause" : "Play";
     lastFrame = 0;
     if (!p) requestRender();
+    updateHud();
+  }
+
+  // ---------------------------------------------------------------- motion panel
+  var SPEED_PRESETS = [0.5, 1, 2, 4, 8];
+  function buildMotion() {
+    var m = state.motion, box = $("motion-params");
+    box.textContent = "";
+    // speed: the slider works in doublings so slow and fast both get room
+    var sp = { type: "n", step: 0.01 };
+    var wrap = rangeField("Speed", Math.log2(m.speed), Math.log2(0.1), Math.log2(12), 0.01, sp,
+      function (v) { m.speed = Math.pow(2, v); speedOut.textContent = fmtSpeed(m.speed); markSpeed(); },
+      function (v) { m.speed = Math.pow(2, v); saveMotion(); markSpeed(); updateHud(); });
+    var speedOut = wrap.querySelector("output");
+    speedOut.textContent = fmtSpeed(m.speed);
+    box.appendChild(wrap);
+    var row = el("div", "seg small speeds");
+    row.setAttribute("role", "radiogroup");
+    row.setAttribute("aria-label", "Quick speeds");
+    SPEED_PRESETS.forEach(function (v) {
+      var b = el("button", null, v === 0.5 ? "\u00bdx" : v + "x");
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.dataset.speed = String(v);
+      on(b, "click", function () { m.speed = v; saveMotion(); buildMotion(); updateHud(); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+    function markSpeed() {
+      Array.prototype.forEach.call(row.children, function (b) {
+        b.setAttribute("aria-checked", Math.abs(parseFloat(b.dataset.speed) - m.speed) < 0.01 ? "true" : "false");
+      });
+    }
+    markSpeed();
+    box.appendChild(segField("Direction", [["1", "Forward"], ["-1", "Reverse"]], String(m.dir), function (v) {
+      m.dir = +v; saveMotion(); buildMotion();
+    }));
+    box.appendChild(segField("Movement", [["smooth", "Smooth"], ["bounce", "Bounce"], ["stepped", "Stepped"]], m.style, function (v) {
+      m.style = v; saveMotion(); buildMotion(); requestRender();
+    }));
+    box.appendChild(segField("Camera move", [["none", "None"], ["spin", "Spin"], ["sway", "Sway"], ["breathe", "Breathe"], ["tumble", "Spin and breathe"]],
+      m.camera, function (v) { m.camera = v; saveMotion(); buildMotion(); requestRender(); }));
+    if (state.spec.kind === "pattern") {
+      box.appendChild(checkField("Pattern flows", m.flow, function (v) { m.flow = v; saveMotion(); requestRender(); }));
+    }
   }
 
   // ---------------------------------------------------------------- files
@@ -698,9 +818,9 @@
     if (wasPlaying) setPlaying(false);
     try {
       busy("Rendering " + W + " x " + H, 0);
-      var out = await engine.renderLarge(state.spec, W, H, 3, state.spec.kind === "pattern" ? state.t : 0, function (f) {
+      var out = await engine.renderLarge(state.spec, W, H, 3, patternT(), function (f) {
         busy("Rendering " + W + " x " + H, f);
-      });
+      }, camera());
       busy("Saving PNG", 1);
       var blob = await new Promise(function (res) { out.toBlob(res, "image/png"); });
       if (!blob) throw new Error("The browser could not make the PNG file.");
@@ -857,7 +977,6 @@
   // ---------------------------------------------------------------- recording a loop
   function recordLoop() {
     if (state.recording) return;
-    if (state.spec.kind !== "pattern") { toast("Only patterns move. Pick a pattern first."); return; }
     if (!canvas.captureStream || !window.MediaRecorder) { toast("This browser cannot record video. Try Chrome, Edge or Firefox."); return; }
     var types = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
     var mime = types.filter(function (t) { return MediaRecorder.isTypeSupported(t); })[0];
@@ -877,16 +996,29 @@
     state.recording = rec;
     state.t = 0;
     setPlaying(true);
+    var loopSec = LOOP_SECONDS / state.motion.speed;
+    var loops = Math.max(1, Math.min(40, Math.ceil(3 / loopSec)));
     rec.start();
     $("btn-record").textContent = "Recording";
     $("btn-record").classList.add("rec");
-    setTimeout(function () { if (rec.state !== "inactive") rec.stop(); }, LOOP_SECONDS / state.speed * 1000);
+    updateHud();
+    setTimeout(function () { if (rec.state !== "inactive") rec.stop(); }, Math.min(12, loops * loopSec) * 1000);
   }
 
   // ---------------------------------------------------------------- skin
   function setSkin(s) {
     document.documentElement.setAttribute("data-skin", s);
     store.set(SKIN_KEY, s);
+    var sp = clone(state.spec), f = sp.finish || {};
+    if (s === "glitch" && f.name !== "phosphor") {
+      state.stash.printFinish = f;
+      sp.finish = state.stash.screenFinish ? clone(state.stash.screenFinish) : S.defaultFinish("phosphor");
+      applySpec(sp);
+    } else if (s === "vintage" && f.name === "phosphor") {
+      state.stash.screenFinish = f;
+      sp.finish = state.stash.printFinish ? clone(state.stash.printFinish) : S.defaultFinish("vintage");
+      applySpec(sp);
+    }
     queueStaticThumbs();
   }
 
@@ -915,10 +1047,6 @@
     on($("btn-help"), "click", function () { if (help.showModal) help.showModal(); else help.setAttribute("open", ""); });
     on($("help-close"), "click", function () { if (help.close) help.close(); else help.removeAttribute("open"); });
     on(help, "click", function (e) { if (e.target === help) help.close(); });
-    on($("speed"), "input", function () {
-      state.speed = parseFloat($("speed").value);
-      $("speed-out").textContent = state.speed.toFixed(2).replace(/\.?0+$/, "") + "x";
-    });
     on($("btn-json"), "click", saveJSON);
     on($("btn-load"), "click", function () { $("file-in").click(); });
     on($("file-in"), "change", function (e) { var f = e.target.files[0]; e.target.value = ""; handleFile(f); });
@@ -929,7 +1057,7 @@
     Array.prototype.forEach.call($("finish-seg").children, function (b) {
       on(b, "click", function () {
         if (state.spec.finish.name === b.dataset.finish) return;
-        state.spec.finish = b.dataset.finish === "vintage" ? S.defaultFinish("vintage") : S.defaultFinish("clean");
+        state.spec.finish = S.defaultFinish(b.dataset.finish);
         changed(true, true);
       });
     });
@@ -1009,6 +1137,11 @@
     if (last) { try { state.spec = S.sanitize(JSON.parse(last)); } catch (e) { /* use the default */ } }
     if (state.spec.kind === "illusion") state.stash.illusion = state.spec.illusion;
     else { state.stash.warp = state.spec.warp; state.stash.motif = state.spec.motif; }
+    // the terminal look shows the art as a phosphor screen
+    if (isGlitch() && (!state.spec.finish || state.spec.finish.name !== "phosphor")) {
+      state.stash.printFinish = state.spec.finish;
+      state.spec.finish = S.defaultFinish("phosphor");
+    }
     buildThumbs("warp", S.WARP_IDS, S.WARPS, function (id) {
       var sp = clone(state.spec);
       sp.warp = S.defaultWarp(id);

@@ -32,6 +32,7 @@ uniform vec4 uBox[12];
 uniform vec4 uList[8];
 uniform vec4 uLay;          // cx, cy (pixels), scale, shape (1 circle)
 uniform vec4 uLay2;         // hx, hy (picture units), frame_line, frame_gap
+uniform vec4 uCam;          // camera move: cos, sin of the turn, zoom (1 = none)
 
 out vec4 outColor;
 
@@ -599,15 +600,20 @@ float illusion(float X, float Y, float px) {
 }
 
 // ---------------------------------------------------------------- per sample
+// camera move: turn and zoom the art inside a fixed frame
+vec2 camQ(vec2 q) {
+  return vec2(q.x * uCam.x - q.y * uCam.y, q.x * uCam.y + q.y * uCam.x) / uCam.z;
+}
+
 float patternInk(vec2 q, float fp) {
-  vec2 qw = rotIn(q);
+  vec2 qw = rotIn(camQ(q));
   WOut w = warpAt(qw);
   bool ink = motifInk(w.uv, qw, w.par);
   bool simpleOK = uMotif != 0 && uMotif != 9;
   if (MP(20) > 0.5 && simpleOK) ink = ink != parityOf(w.uv, w.par);
   bool inv = MP(21) > 0.5;
   if (inv) ink = !ink;
-  if (w.dens >= 0.0) fp = w.dens / uLay.z;
+  if (w.dens >= 0.0) fp = w.dens / uLay.z / uCam.z;
   float minpx = MP(22);
   if (minpx > 4.0 && simpleOK && fp > 1.0 / minpx) {
     bool chk = parityOf(w.uv, w.par);
@@ -622,11 +628,11 @@ float patternInk(vec2 q, float fp) {
 
 // tiles per output pixel, robust to jumps: smaller of the two one-sided differences per axis
 float footprint(vec2 q, float e) {
-  vec2 c = warpAt(rotIn(q)).uv;
-  vec2 xp = warpAt(rotIn(q + vec2(e, 0.0))).uv;
-  vec2 xm = warpAt(rotIn(q - vec2(e, 0.0))).uv;
-  vec2 yp = warpAt(rotIn(q + vec2(0.0, e))).uv;
-  vec2 ym = warpAt(rotIn(q - vec2(0.0, e))).uv;
+  vec2 c = warpAt(rotIn(camQ(q))).uv;
+  vec2 xp = warpAt(rotIn(camQ(q + vec2(e, 0.0)))).uv;
+  vec2 xm = warpAt(rotIn(camQ(q - vec2(e, 0.0)))).uv;
+  vec2 yp = warpAt(rotIn(camQ(q + vec2(0.0, e)))).uv;
+  vec2 ym = warpAt(rotIn(camQ(q - vec2(0.0, e)))).uv;
   float mx = min(length(xp - c), length(c - xm));
   float my = min(length(yp - c), length(c - ym));
   return max(mx, my) / e / uLay.z;
@@ -662,7 +668,8 @@ void main() {
       if (sx >= uSS) break;
       vec2 P = pc - 0.5 + (vec2(float(sx), float(sy)) + 0.5) / ss;
       vec2 q = vec2(P.x - uLay.x, uLay.y - P.y) / sc;
-      float ink = pattern ? patternInk(q, fp) : illusion(q.x, q.y, px);
+      vec2 cq = camQ(q);
+      float ink = pattern ? patternInk(q, fp) : illusion(cq.x, cq.y, px / uCam.z);
       acc += layoutInk(ink, q);
     }
   }
@@ -676,7 +683,7 @@ precision highp int;
 
 uniform sampler2D uCov;
 uniform vec2 uRes;
-uniform int uVintage;
+uniform int uVintage;       // 0 clean, 1 vintage print, 2 phosphor screen
 uniform vec3 uPaper;
 uniform vec3 uInk;
 uniform float uBlur;        // gaussian sigma in pixels
@@ -687,6 +694,10 @@ uniform uint uSeed;
 uniform vec4 uLines[12];    // hairline scratches (pixel coords, rows from the top)
 uniform int uNLines;
 uniform float uLineW;
+uniform float uGlow;        // phosphor: glow, scanlines, color bleed, dark corners
+uniform float uScan;
+uniform float uBleed;
+uniform float uVig;
 
 out vec4 outColor;
 
@@ -735,6 +746,36 @@ void main() {
     outColor = vec4(col / 255.0, 1.0);
     return;
   }
+  if (uVintage == 2) {
+    // phosphor screen: glowing ink on a dark tube, scanlines, a little color bleed, darker corners
+    float W2 = uRes.x, H2 = uRes.y, base2 = min(W2, H2), s = base2 / 1000.0;
+    vec2 pix2 = vec2(gl_FragCoord.x - 0.5, H2 - gl_FragCoord.y - 0.5);
+    int ab = int(floor(uBleed * 2.5 * max(1.0, s) + 0.5));
+    float cr = covAt(gp + ivec2(ab, 0)), cb = covAt(gp - ivec2(ab, 0));
+    float gr = (1.5 + 9.0 * uGlow) * max(0.6, s);
+    float g = 0.0;
+    for (int ring = 1; ring <= 3; ring++) {
+      float rr = gr * float(ring) / 3.0;
+      for (int k = 0; k < 12; k++) {
+        float a = 6.2831853 * (float(k) + 0.5 * float(ring)) / 12.0;
+        g += covAt(gp + ivec2(int(floor(rr * cos(a) + 0.5)), int(floor(rr * sin(a) + 0.5))));
+      }
+    }
+    g /= 36.0;
+    vec3 P = uInk / 255.0, bg = uPaper / 255.0;
+    vec3 lit = vec3(P.r * cr, P.g * c, P.b * cb) * 0.84;
+    vec3 col = bg + lit * (1.0 - bg);
+    col += P * g * uGlow * 0.95 * (1.0 - 0.55 * c);
+    col += vec3(c * c * 0.06);
+    float sp = max(3.0, base2 / 260.0);
+    float sl = 0.5 + 0.5 * cos(6.2831853 * (pix2.y + 0.5) / sp);
+    col *= 1.0 - uScan * 0.7 * (1.0 - sl) * (1.0 - sl);
+    vec2 uv = ((pix2 + 0.5) / uRes - 0.5) * uRes / base2;
+    col *= 1.0 - uVig * 0.6 * smoothstep(0.35, 0.95, length(uv));
+    col += (rnd(int(pix2.x), int(pix2.y), 9) - 0.5) * uGrain * 0.06;
+    outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+    return;
+  }
   float W = uRes.x, H = uRes.y, base = min(W, H);
   vec2 pix = vec2(gl_FragCoord.x - 0.5, H - gl_FragCoord.y - 0.5);   // rows from the top
 
@@ -763,11 +804,11 @@ void main() {
   float soft = s > 0.8 ? 0.7 * s : 0.5;
   for (int cj = -1; cj <= 1; cj++) {
     for (int ci = -1; ci <= 1; ci++) {
-      ivec2 cc = ivec2(cell) + ivec2(ci, cj);
+      ivec2 cc = ivec2(cell) + ivec2(ci, cj) + 4096;
       for (int n = 0; n < 3; n++) {
         int z = 100 + n * 7;
         if (rnd(cc.x, cc.y, z) >= uSpecks / 3.0) continue;
-        vec2 pos = (vec2(cc) + vec2(rnd(cc.x, cc.y, z + 1), rnd(cc.x, cc.y, z + 2))) * G;
+        vec2 pos = (vec2(cc - 4096) + vec2(rnd(cc.x, cc.y, z + 1), rnd(cc.x, cc.y, z + 2))) * G;
         float u = rnd(cc.x, cc.y, z + 3);
         float r = (u * u * u * 2.2 + 0.4) * s;
         float d = length(pix + 0.5 - pos);
@@ -812,5 +853,22 @@ void main() {
 }
 `;
 
-  window.OpArtShaders = { VERT: VERT, COVERAGE: COVERAGE, FINISH: FINISH };
+  var TRAIL = String.raw`#version 300 es
+precision highp float;
+uniform sampler2D uCur;
+uniform sampler2D uPrev;
+uniform float uDecay;
+uniform vec3 uBg;
+out vec4 outColor;
+void main() {
+  ivec2 gp = ivec2(gl_FragCoord.xy);
+  vec3 c = texelFetch(uCur, gp, 0).rgb;
+  vec3 p = texelFetch(uPrev, gp, 0).rgb;
+  vec3 bg = uBg / 255.0;
+  vec3 tr = bg + max(p - bg, vec3(0.0)) * uDecay;
+  outColor = vec4(max(c, tr), 1.0);
+}
+`;
+
+  window.OpArtShaders = { VERT: VERT, COVERAGE: COVERAGE, FINISH: FINISH, TRAIL: TRAIL };
 })();

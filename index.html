@@ -8,11 +8,11 @@
 <meta name="color-scheme" content="light dark">
 <title>Mod Mara: Illusions for Losing One’s Self</title>
 <meta name="description" content="Make black and white optical art in your browser: warped grids, spirals and classic illusions, with live sliders and animation.">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="app.css?v=12">
-<link rel="stylesheet" href="skins/vintage.css?v=12">
-<link rel="stylesheet" href="skins/glitch.css?v=12">
-<script src="boot.js?v=12"></script>
+<link rel="icon" href="favicon.svg?v=14" type="image/svg+xml">
+<link rel="stylesheet" href="app.css?v=14">
+<link rel="stylesheet" href="skins/vintage.css?v=14">
+<link rel="stylesheet" href="skins/glitch.css?v=14">
+<script src="boot.js?v=14"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -64,6 +64,10 @@
       <div class="stage-box" id="stage-box">
         <div class="frame" id="frame">
           <canvas id="view" aria-label="Op art picture"></canvas>
+          <div class="hud" aria-hidden="true">
+            <span class="hud-tl" id="hud-tl"></span><span class="hud-tr" id="hud-tr"></span>
+            <span class="hud-bl" id="hud-bl"></span><span class="hud-br" id="hud-br"></span>
+          </div>
           <span class="crop tl" aria-hidden="true"></span><span class="crop tr" aria-hidden="true"></span>
           <span class="crop bl" aria-hidden="true"></span><span class="crop br" aria-hidden="true"></span>
         </div>
@@ -151,21 +155,19 @@
         <div class="seg" id="finish-seg" role="radiogroup" aria-label="Finish">
           <button type="button" role="radio" data-finish="clean">Clean</button>
           <button type="button" role="radio" data-finish="vintage">Vintage print</button>
+          <button type="button" role="radio" data-finish="phosphor">Phosphor</button>
         </div>
         <div class="params" id="finish-params"></div>
       </section>
 
-      <section class="sec only-pattern" id="sec-motion">
+      <section class="sec" id="sec-motion">
         <header class="sec-head"><h2><span class="sec-no" data-no="motion">06</span> Motion</h2></header>
-        <p class="sec-note">Every pattern loops without a seam.</p>
+        <p class="sec-note">Everything loops without a seam.</p>
         <div class="row-btns">
           <button type="button" class="btn" id="btn-play2" aria-pressed="false">Play</button>
-          <button type="button" class="btn" id="btn-record" title="Record one loop as a WebM video">Record loop</button>
+          <button type="button" class="btn" id="btn-record" title="Record the loop as a WebM video">Record loop</button>
         </div>
-        <label class="field">
-          <span class="field-name">Speed <output id="speed-out">1x</output></span>
-          <input type="range" id="speed" min="0.25" max="3" step="0.05" value="1">
-        </label>
+        <div class="params" id="motion-params"></div>
       </section>
 
       <section class="sec" id="sec-save">
@@ -216,7 +218,8 @@
       <li>Press <b>Surprise me</b> for a fresh random picture.</li>
       <li>Click the small pictures to change the warp, motif or illusion. Drag the sliders to fine tune.</li>
       <li>The dice next to a section shuffles just that part. The lock keeps a part fixed when you press Surprise me.</li>
-      <li>Press play to watch a pattern move. Each one loops without a seam. Record loop saves it as a video.</li>
+      <li>Press play to watch it move. Motion has speeds from slow to very fast, forward or reverse, smooth, bounce or stepped movement, and camera moves (spin, sway, breathe) that work on illusions too. Everything loops without a seam, and Record loop saves it as a video.</li>
+      <li>Finish sets how the ink looks: clean, a vintage print, or a glowing phosphor screen. The second look (the half-circle button) shows pictures as phosphor screens.</li>
       <li>Press the heart to keep a picture in your favorites. They live in this browser only, so use Back up all to save them to a file.</li>
       <li>Save the picture as a PNG, or save its settings file.</li>
     </ol>
@@ -237,10 +240,10 @@
 <input type="file" id="file-in" accept=".json,application/json" hidden>
 <input type="file" id="fav-in" accept=".json,application/json" hidden>
 
-<script src="shaders.js?v=12"></script>
-<script src="spec.js?v=12"></script>
-<script src="randomize.js?v=12"></script>
-<script src="engine.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="shaders.js?v=14"></script>
+<script src="spec.js?v=14"></script>
+<script src="randomize.js?v=14"></script>
+<script src="engine.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>
